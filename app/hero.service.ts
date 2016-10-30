@@ -1,23 +1,55 @@
 import { Injectable } from '@angular/core';
+import { Headers,Http } from '@angular/http';
+
+import 'rxjs/add/operator/toPromise';
 import { Hero } from './hero';
-import { HEROES } from './mock-heroes';
 
 @Injectable()
-//导出HeroService类，
-export class HeroService{
-	//promise .then(function(result){}) result's data type  should be Hero[]
-	getHeroes(): Promise<Hero[]>{
-		return Promise.resolve(HEROES);
-	}
+export class HeroService {
+	private heroesUrl = 'app/heroes';  // URL to web api
+	private headers = new Headers({
+		'Content-type':'application/json'
+	});
 
-	getHeroesSlowly(): Promise<Hero[]>{
-		return new Promise<Hero[]>(resolve=>
-			setTimeout(resolve,2000)).then(()=>this.getHeroes());
-	}
+	constructor(private http: Http) { }
 
-	getHero(id : number):Promise<Hero>{
+	private handleError(error:any):Promise<any>{
+		return Promise.reject(error.message||error);
+	}
+	getHeroes(): Promise<Hero[]> {
+		return this.http.get(this.heroesUrl)
+	           .toPromise()
+	           .then(response => response.json().data as Hero[])
+	           .catch(this.handleError);
+	}
+	getHero(id:number):Promise<Hero>{
 		return this.getHeroes()
-		.then(heroes => heroes.find(hero=>hero.id===id));
+		.then(heroes=>heroes.find(hero=>hero.id===id));
+	}
+	update(hero: Hero):Promise<Hero>{
+		const url = `${this.heroesUrl}/${hero.id}`;
+
+		return this.http
+		.put(url,JSON.stringify(hero),{headers:this.headers})
+		.toPromise()
+		.then(()=>hero)
+		.catch(this.handleError);
 	}
 
+	create(name: string):Promise<Hero>{
+		return this.http
+		.post(this.heroesUrl,JSON.stringify({name:name}),{headers:this.headers})
+		.toPromise()
+		.then(res=>res.json().data)
+		.catch(this.handleError);
+	}
+
+	delete(id:number):Promise<void>{
+		const url =`${this.heroesUrl}/${id}`;
+		debugger;
+		return this.http.delete(url,{headers:this.headers})
+		.toPromise()
+		.then(()=>null)
+		.catch(this.handleError);
+	}
 }
